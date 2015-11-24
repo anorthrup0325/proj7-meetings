@@ -1,6 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
 <html lang="en"> <head>
-<title>Appointments</title>
+<title>Meeting Times</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <link rel="stylesheet" type="text/css"
@@ -8,7 +8,7 @@
 />
 
 <link rel="stylesheet" type="text/css"
- href="/static/js/node_modules/bootstrap-daterangepicker/daterangepicker.css"
+ href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-daterangepicker/2.1.13/daterangepicker.css"
 />
 
 <link rel="stylesheet" type="text/css"
@@ -34,7 +34,7 @@
 <body>
 <div class="container">
 
-<h1>Busy times</h1>
+<h1>Meeting Times</h1>
 
 <!--
   -- If there are any warnings or other messages from a prior action,
@@ -53,7 +53,7 @@
 {% endwith %}
 
 <div class="row">
-<div class="col-md-12">
+<div class="col-sm-12">
 <h2>Date range</h2>
   <form action="/setrange" method="post">
   <input type="text" name="daterange" size="12"
@@ -65,16 +65,17 @@
      border: 1px solid #ccc; width: 12em" >
   <script type="text/javascript">
   $(function() {
+  var now = moment().local().startOf('day');
   $('input[name="daterange"]').daterangepicker(
     {    ranges: {
-           'Today': [moment(), moment()],
-           'Tomorrow':[moment().add(1, 'days'),
-                       moment().add(1, 'days')], 
-           'This week':[moment().startOf('week'), moment().endOf('week')],
-           'Next week':[moment().add(7, 'days').startOf('week'),
-                        moment().add(7, 'days').endOf('week')],
-           'This month':[moment().startOf('month'), moment().endOf('month')],
-           'Within two weeks':[moment(),moment().add(15, 'days')]
+           'Today': [moment(now), moment(now)],
+           'Tomorrow':[moment(now).add(1, 'days'),
+                       moment(now).add(1, 'days')], 
+           'This week':[moment(now), moment(now).endOf('week')],
+           'Next week':[moment(now).add(7, 'days').startOf('week'),
+                        moment(now).add(7, 'days').endOf('week')],
+           'This month':[moment(now), moment(now).endOf('month')],
+           'Within two weeks':[moment(now),moment(now).add(15, 'days')]
         }}
        );
     });
@@ -121,9 +122,6 @@
   				<input type="checkbox" name="calendars" value="{{ cal.id }}">{{ cal.summary }}</input>
   			</label>	
   		</div>
-  		{% if loop.index is divisibleby 3 %}
-  			</div> <div class="row">
-  		{% endif %}
   {% endfor %}
   </div>
   <div class="row">

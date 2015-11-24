@@ -20,6 +20,9 @@ import httplib2   # used in oauth2 flow
 # Google API for services 
 from apiclient import discovery
 
+# Calculating free times
+from freelist import FreeList
+
 ###
 # Globals
 ###
@@ -75,6 +78,7 @@ def show_times():
     selected_cals = request.form.getlist('calendars')
     app.logger.debug(selected_cals)
     flask.session['free_times'],flask.session['busy_times'] = get_times(gcal_service, selected_cals)
+    flask.session['meeting_times'] = calc_meeting_times();
     
     return render_template('show_times.html')
 
@@ -209,7 +213,7 @@ def setrange():
     flask.session['begin_date'] = interpret_date(daterange_parts[0])
     flask.session['end_date'] = interpret_date(daterange_parts[2])
     app.logger.debug("Setrange parsed {} - {}  dates as {} - {}".format(
-      daterange_parts[0], daterange_parts[1], 
+      daterange_parts[0], daterange_parts[2], 
       flask.session['begin_date'], flask.session['end_date']))
     return flask.redirect(flask.url_for("choose"))
 
@@ -345,15 +349,16 @@ def get_times(service, cals):
 		# Get the items from google
 		cal_items = service.events().list(calendarId=cal, timeMin=time_min, timeMax=time_max, singleEvents=True).execute()['items']
 		for item in cal_items:
-			# Add to proper list
 			try:
 				t_start = item["start"]["dateTime"]
 			except:
-				t_start = arrow.get(item["start"]["date"], "YYYY-MM-DD").isoformat()
+				t_start = arrow.get(item["start"]["date"], "YYYY-MM-DD").replace(
+          tzinfo=tz.tzlocal()).isoformat()
 			try:
 				t_end = item["end"]["dateTime"]
 			except:
-				t_end = arrow.get(item["end"]["date"], "YYYY-MM-DD").isoformat()
+				t_end = arrow.get(item["end"]["date"], "YYYY-MM-DD").replace(
+          tzinfo=tz.tzlocal()).isoformat()
 			item_range = {"start": t_start, "end": t_end, "desc": item["summary"]}
 			if "transparency" in item and item["transparency"] == "transparent":
 				ftl.append(item_range)
@@ -361,6 +366,16 @@ def get_times(service, cals):
 				btl.append(item_range)
 	
 	return ftl,btl
+
+def calc_meeting_times():
+  btl = flask.session["busy_times"]
+  btl = sorted(btl, key=lambda range: range["start"])
+  btl = FreeList.unionized(btl)
+  
+  app.logger.debug(btl)
+  fl = FreeList.create(flask.session["begin_date"], flask.session["end_date"], flask.session["begin_time"], flask.session["end_time"], btl)
+
+  return fl.getTimes()
 
 
 #################
